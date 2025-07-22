@@ -1,59 +1,41 @@
-# coastalwatch
 
-# 🌊 Coastal Watch Australia
+# Coastal Watch Australia
 
-Coastal Watch Australia is a Streamlit-powered dashboard that visualizes NDVI (vegetation health) and coastline change across key Australian coastal locations. It integrates with **Digital Earth Australia (DEA)** to automatically extract and update environmental monitoring data.
+This repository contains a Streamlit dashboard and data pipeline to monitor NDVI and coastline change across Australian coastal sites using Digital Earth Australia (DEA) data.
 
----
+## 🧱 Structure
 
-## 📦 Features
+- `app.py`: Main Streamlit dashboard
+- `alerts.py`: AI risk scoring logic
+- `dea_to_dashboard_export.py`: Automated DEA export script
+- `data/`: NDVI & coastline data for the dashboard
+- `requirements.txt`: Python dependencies
 
-- 🛰️ NDVI trend analysis using Sentinel-2 imagery (via DEA)
-- 🌐 Coastline change detection from DEA’s coastline datasets
-- 🔔 AI-powered alerts for erosion and vegetation degradation
-- 🗺️ Interactive map + plots for each monitored location
-- 📤 Scheduled monthly export pipeline for automated updates
+## 🚀 Deployment Instructions
 
----
-
-## 📁 Folder Structure
-coastal-watch-australia/
-├── app.py # Streamlit dashboard interface
-├── alerts.py # Erosion/NDVI alert scoring logic
-├── dea_to_dashboard_export.py # DEA data export script
-├── requirements.txt # Python dependencies
-├── data/
-│ ├── NDVI/
-│ │ └── Rainbow_Beach/
-│ │ ├── NDVI_scene1.tif
-│ │ └── NDVI_timeseries_Rainbow_Beach.csv
-│ └── Coastlines/
-│ └── Rainbow_Beach/
-│ └── coastlines_Rainbow_Beach.geojson
-└── README.md
-
-
----
-
-## 🚀 Quickstart Instructions
-
-### 1. Clone the Repository
+### 1. Clone this repo and install dependencies
 
 ```bash
-git clone https://github.com/<yourusername>/coastal-watch-australia.git
+git clone https://github.com/yourusername/coastal-watch-australia.git
 cd coastal-watch-australia
-
-### 2. Install Dependencies
 pip install -r requirements.txt
+```
 
-### 3. Run the Dashboard Locally
+### 2. Run locally
+
+```bash
 streamlit run app.py
+```
+
+### 3. Schedule Monthly DEA Data Export
+
+Use cron or a scheduler to run `dea_to_dashboard_export.py` on the 1st of each month.
 
 ### 4. Deploy to Streamlit Cloud
-Push this repo to GitHub
 
-Go to https://streamlit.io/cloud
+- Push this repo to GitHub.
+- Go to [https://streamlit.io/cloud](https://streamlit.io/cloud)
+- Click "New App" → Select this repo → `app.py` as entry point.
 
-Click “New App” → Select your repo → Set app.py as the entry point
+You're done ✅
 
-Click “Deploy” – you're live!
