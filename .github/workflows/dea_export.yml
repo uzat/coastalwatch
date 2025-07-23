@@ -20,11 +20,14 @@ jobs:
         run: |
           pip install earthengine-api pandas matplotlib geopandas
 
-      - name: 🔐 Decode Earth Engine credentials
+      - name: 🔐 Decode Earth Engine credentials to file (optional)
         run: |
           mkdir -p ~/.config/earthengine
           echo "${{ secrets.EARTHENGINE_SERVICE_ACCOUNT_JSON }}" | base64 --decode > ~/.config/earthengine/credentials
           echo "✅ Credentials decoded to ~/.config/earthengine/credentials"
+
+      - name: 🌱 Set EARTHENGINE_SERVICE_ACCOUNT_JSON env var
+        run: echo "EARTHENGINE_SERVICE_ACCOUNT_JSON=${{ secrets.EARTHENGINE_SERVICE_ACCOUNT_JSON }}" >> $GITHUB_ENV
 
       - name: ⚠️ Abort if credentials file missing or empty
         run: |
