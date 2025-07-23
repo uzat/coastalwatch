@@ -22,8 +22,8 @@ jobs:
 
       - name: Setup Earth Engine credentials
         run: |
-          mkdir -p ~/.config/earthengine
-          echo "${{ secrets.EARTHENGINE_TOKEN }}" > ~/.config/earthengine/credentials
+          echo "${{ secrets.EARTHENGINE_SERVICE_ACCOUNT_JSON }}" > service_account.json
+          export EARTHENGINE_SERVICE_ACCOUNT_JSON="$(cat service_account.json)"
 
       - name: Run export script
         run: |
