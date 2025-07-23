@@ -1,9 +1,7 @@
 import os
 import json
 import ee
-import pandas as pd
-import matplotlib.pyplot as plt
-from google.oauth2.credentials import Credentials
+from google.oauth2 import service_account
 
 def export_ndvi_chart(csv_path: str, output_path: str):
     try:
@@ -30,22 +28,19 @@ def process_location(location_name):
     export_ndvi_chart(ndvi_csv, chart_path)
 
 def initialize_earth_engine():
-    ee_token = os.environ.get("EARTHENGINE_TOKEN")
-    if not ee_token:
-        raise Exception("EARTHENGINE_TOKEN environment variable not found")
+    json_key = os.environ.get("EARTHENGINE_SERVICE_ACCOUNT_JSON")
+    if not json_key:
+        raise Exception("EARTHENGINE_SERVICE_ACCOUNT_JSON not found in environment variables.")
 
-    # Parse the token and inject required fields
-    credentials_dict = json.loads(ee_token)
-    credentials_dict["client_id"] = "32555940559.apps.googleusercontent.com"
-    credentials_dict["client_secret"] = "ZmssLNjJy2998hD4CTg2ejr2"
-    credentials_dict["type"] = "authorized_user"
-
-    from google.oauth2.credentials import Credentials
-    credentials = Credentials.from_authorized_user_info(credentials_dict)
+    info = json.loads(json_key)
+    credentials = service_account.Credentials.from_service_account_info(info, scopes=[
+        "https://www.googleapis.com/auth/earthengine",
+        "https://www.googleapis.com/auth/cloud-platform"
+    ])
 
     try:
         ee.Initialize(credentials)
-        print("✅ Earth Engine initialized successfully.")
+        print("✅ Earth Engine initialized successfully with service account.")
     except Exception as e:
         print(f"❌ Failed to initialize Earth Engine: {e}")
         raise
