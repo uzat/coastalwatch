@@ -51,11 +51,17 @@ jobs:
           git config --global user.name "github-actions"
           git config --global user.email "actions@github.com"
           git pull --rebase
-          git add -f data/** frontend_config.json dashboard_data.json
+
+          # Add files only if they exist
+          if [ -d "data" ]; then git add -f data/**; fi
+          if [ -f "frontend_config.json" ]; then git add frontend_config.json; fi
+          if [ -f "dashboard_data.json" ]; then git add dashboard_data.json; fi
+
           git status
           git commit -m "Update exported data and frontend config from Earth Engine" || echo "No changes to commit"
           git push
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
 
 
