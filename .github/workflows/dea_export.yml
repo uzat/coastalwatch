@@ -22,9 +22,8 @@ jobs:
 
       - name: Setup Earth Engine credentials
         run: |
-          echo '${{ secrets.EARTHENGINE_SERVICE_ACCOUNT_JSON }}' > service_account.json
-          echo "EARTHENGINE_SERVICE_ACCOUNT_JSON=$(cat service_account.json)" >> $GITHUB_ENV
-
+          echo "${{ secrets.EARTHENGINE_SERVICE_ACCOUNT_JSON }}" | base64 --decode > service_account.json
+          echo "SERVICE_ACCOUNT_PATH=service_account.json" >> $GITHUB_ENV
 
       - name: Run export script
         run: |
