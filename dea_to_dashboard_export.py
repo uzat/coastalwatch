@@ -1,7 +1,17 @@
 import os
 import json
 import ee
-from google.oauth2 import service_account
+from google.oauth2.service_account import Credentials
+
+def initialize_earth_engine():
+    token_str = os.environ.get("EARTHENGINE_SERVICE_ACCOUNT_JSON")
+    if not token_str:
+        raise Exception("EARTHENGINE_SERVICE_ACCOUNT_JSON not found in environment variables.")
+    token_dict = json.loads(token_str)
+    credentials = Credentials.from_service_account_info(token_dict)
+    ee.Initialize(credentials)
+
+
 
 def export_ndvi_chart(csv_path: str, output_path: str):
     try:
@@ -26,24 +36,6 @@ def process_location(location_name):
     ndvi_csv = f'data/NDVI/{location_name}/NDVI_{location_name}.csv'
     chart_path = f'data/NDVI/{location_name}/NDVI_{location_name}_chart.png'
     export_ndvi_chart(ndvi_csv, chart_path)
-
-def initialize_earth_engine():
-    json_key = os.environ.get("EARTHENGINE_SERVICE_ACCOUNT_JSON")
-    if not json_key:
-        raise Exception("EARTHENGINE_SERVICE_ACCOUNT_JSON not found in environment variables.")
-
-    info = json.loads(json_key)
-    credentials = service_account.Credentials.from_service_account_info(info, scopes=[
-        "https://www.googleapis.com/auth/earthengine",
-        "https://www.googleapis.com/auth/cloud-platform"
-    ])
-
-    try:
-        ee.Initialize(credentials)
-        print("✅ Earth Engine initialized successfully with service account.")
-    except Exception as e:
-        print(f"❌ Failed to initialize Earth Engine: {e}")
-        raise
 
 def main():
     locations = ["Rainbow_Beach", "Byron_Bay"]
