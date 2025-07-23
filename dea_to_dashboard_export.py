@@ -4,11 +4,14 @@ import ee
 from google.oauth2.service_account import Credentials
 
 def initialize_earth_engine():
-    token_str = os.environ.get("EARTHENGINE_SERVICE_ACCOUNT_JSON")
-    if not token_str:
-        raise Exception("EARTHENGINE_SERVICE_ACCOUNT_JSON not found in environment variables.")
-    token_dict = json.loads(token_str)
-    credentials = Credentials.from_service_account_info(token_dict)
+    json_path = os.environ.get("SERVICE_ACCOUNT_PATH", "service_account.json")
+    if not os.path.exists(json_path):
+        raise Exception(f"Service account file not found: {json_path}")
+
+    with open(json_path) as f:
+        credentials_info = json.load(f)
+
+    credentials = Credentials.from_service_account_info(credentials_info)
     ee.Initialize(credentials)
 
 
