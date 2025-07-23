@@ -52,7 +52,7 @@ def get_ndvi_series(lat, lon, location_name):
         .filter(ee.Filter.lt("CLOUDY_PIXEL_PERCENTAGE", 40)) \
         .select(["B4", "B8", "SCL", "MSK_CLDPRB"])
 
-    # Apply selected mask
+    # Apply selected cloud masking method
     if USE_SCL_MASK:
         collection = collection.map(mask_clouds_scl)
     else:
@@ -60,21 +60,34 @@ def get_ndvi_series(lat, lon, location_name):
 
     def compute_ndvi(image):
         ndvi = image.normalizedDifference(["B8", "B4"]).rename("NDVI")
-        date = image.date().format("YYYY-MM-dd")
-        return ndvi.reduceRegion(
+        mean_dict = ndvi.reduceRegion(
             reducer=ee.Reducer.mean(),
             geometry=point,
             scale=10
-        ).set("date", date)
+        )
+        date = image.date().format("YYYY-MM-dd")
+        return ee.Feature(None, {
+            "NDVI": mean_dict.get("NDVI"),
+            "date": date
+        })
 
-    ndvi_results = collection.map(compute_ndvi).filter(ee.Filter.notNull(["NDVI"]))
-    features = ndvi_results.aggregate_array("NDVI").getInfo()
-    dates = ndvi_results.aggregate_array("date").getInfo()
+    # Map over the collection and filter out nulls
+    feature_collection = collection.map(compute_ndvi) \
+                                   .filter(ee.Filter.notNull(["NDVI"]))
 
-    if not dates or not features:
+    try:
+        ndvi_values = feature_collection.aggregate_array("NDVI").getInfo()
+        date_values = feature_collection.aggregate_array("date").getInfo()
+    except Exception as e:
+        print(f"⚠️ Failed to retrieve NDVI data for {location_name}: {e}")
         return []
 
-    return [{"date": d, "ndvi": n} for d, n in zip(dates, features)]
+    if not date_values or not ndvi_values:
+        print(f"⚠️ No NDVI summary returned for {location_name}")
+        return []
+
+    return [{"date": d, "ndvi": n} for d, n in zip(date_values, ndvi_values)]
+
 
 # 📊 Save chart
 def save_chart(location, data):
