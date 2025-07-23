@@ -1,0 +1,27 @@
+{
+  "Rainbow_Beach": {
+    "NDVI": {
+      "raster_files": [
+        "data/NDVI/Rainbow_Beach/ndvi_Rainbow_Beach_2025-07-01.tif",
+        "data/NDVI/Rainbow_Beach/ndvi_Rainbow_Beach_2025-07-15.tif"
+      ],
+      "summary_csv": "data/NDVI/Rainbow_Beach/ndvi_summary_Rainbow_Beach.csv"
+    },
+    "Coastlines": {
+      "vector_file": "data/Coastlines/Rainbow_Beach/coastlines_Rainbow_Beach.geojson",
+      "summary_csv": null
+    },
+    "WaterExtent": {
+      "raster_files": [],
+      "summary_csv": null
+    },
+    "LandCover": {
+      "raster_files": [],
+      "summary_csv": null
+    },
+    "DuneErosion": {
+      "vector_file": null,
+      "summary_csv": null
+    }
+  }
+}
