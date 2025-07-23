@@ -20,35 +20,32 @@ jobs:
         run: |
           pip install earthengine-api pandas matplotlib geopandas
 
-      - name: 🔐 Decode Earth Engine credentials to file (optional)
+      - name: 🔐 Decode Earth Engine credentials
         run: |
           mkdir -p ~/.config/earthengine
           echo "${{ secrets.EARTHENGINE_SERVICE_ACCOUNT_JSON }}" | base64 --decode > ~/.config/earthengine/credentials
-          echo "✅ Credentials decoded to ~/.config/earthengine/credentials"
-
-      - name: 🌱 Set EARTHENGINE_SERVICE_ACCOUNT_JSON env var
-        run: echo "EARTHENGINE_SERVICE_ACCOUNT_JSON=${{ secrets.EARTHENGINE_SERVICE_ACCOUNT_JSON }}" >> $GITHUB_ENV
+          echo "✅ Credentials decoded"
 
       - name: ⚠️ Abort if credentials file missing or empty
         run: |
           if [ ! -s ~/.config/earthengine/credentials ]; then
             echo "❌ Earth Engine credentials missing or empty"
             exit 1
-          else
-            echo "✅ Earth Engine credentials confirmed"
           fi
+          echo "✅ Earth Engine credentials present"
 
       - name: 🛰 Run NDVI export script
         run: |
           echo "Starting export..."
           python dea_to_dashboard_export.py
+          echo "✅ Script finished"
         continue-on-error: false
 
       - name: 🗂 Show updated files
         run: |
-          echo "📂 Current data files:"
+          echo "📂 Current NDVI data files:"
           find data/ -type f || echo "⚠️ No data files found"
-          echo "🖼 PNG output files:"
+          echo "🖼 Chart images:"
           find output/ -type f || echo "⚠️ No chart images found"
 
       - name: ✅ Commit and push results
