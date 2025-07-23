@@ -1,4 +1,4 @@
-name: Export Earth Engine NDVI and Coastline
+name: Export Earth Engine NDVI and Charts
 
 on:
   workflow_dispatch:
@@ -6,6 +6,9 @@ on:
 jobs:
   export:
     runs-on: ubuntu-22.04
+    defaults:
+      run:
+        shell: bash
 
     steps:
       - name: 📥 Checkout repository
@@ -16,39 +19,46 @@ jobs:
         with:
           python-version: '3.10'
 
-      - name: 📦 Install dependencies
+      - name: 📦 Install Python dependencies
         run: |
-          pip install --upgrade pip
           pip install earthengine-api pandas matplotlib geopandas
 
-      - name: Set EARTHENGINE_SERVICE_ACCOUNT_JSON env var
-        run: echo "Set secret"
-        env:
-          EARTHENGINE_SERVICE_ACCOUNT_JSON: ${{ secrets.EARTHENGINE_SERVICE_ACCOUNT_JSON }}
-          
-      - name: Run export script
+      - name: 🔐 Decode Earth Engine credentials and save to file
+        run: |
+          mkdir -p ~/.config/earthengine
+          echo "${{ secrets.EARTHENGINE_SERVICE_ACCOUNT_JSON }}" | base64 --decode > ~/.config/earthengine/credentials
+          echo "✅ Earth Engine credentials written"
+
+      - name: ✅ Confirm credentials file exists
+        run: |
+          if [ ! -s ~/.config/earthengine/credentials ]; then
+            echo "❌ Earth Engine credentials missing or empty"
+            exit 1
+          else
+            echo "✅ Earth Engine credentials are present"
+          fi
+
+      - name: 🚀 Run NDVI export script
         run: |
           echo "Starting export..."
-          python dea_to_dashboard_export.py
-        env:
-          EARTHENGINE_SERVICE_ACCOUNT_JSON: ${{ secrets.EARTHENGINE_SERVICE_ACCOUNT_JSON }}
+          python dea_to_dashboard_export.py || { echo "❌ Export script failed"; exit 1; }
+          echo "Export script finished."
 
-      - name: Commit and push results
+      - name: 🧹 Show what changed
+        run: |
+          echo "📝 Git status:"
+          git status
+          echo "📁 Changed files:"
+          git diff --name-only || true
+
+      - name: 📤 Commit and push results
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           git config --global user.name "github-actions"
           git config --global user.email "actions@github.com"
           git pull --rebase
-
-          # Add files only if they exist
-          if [ -d "data" ]; then git add -f data/**; fi
-          if [ -f "frontend_config.json" ]; then git add frontend_config.json; fi
-          if [ -f "dashboard_data.json" ]; then git add dashboard_data.json; fi
-
+          git add -f data/** frontend_config.json dashboard_data.json || true
           git status
-          git commit -m "Update exported data and frontend config from Earth Engine" || echo "No changes to commit"
-          git push
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-
-
+          git commit -m "🔄 Update exported NDVI data and charts" || echo "ℹ️ No changes to commit"
+          git push || echo "⚠️ Push failed (possibly permissions or no changes)"
