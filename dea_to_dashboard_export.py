@@ -34,10 +34,12 @@ def initialize_earth_engine():
     if not ee_token:
         raise Exception("EARTHENGINE_TOKEN environment variable not found")
 
-    # Parse the token into a dict
+    # Parse the token and inject required fields
     credentials_dict = json.loads(ee_token)
+    credentials_dict["client_id"] = "32555940559.apps.googleusercontent.com"
+    credentials_dict["client_secret"] = "ZmssLNjJy2998hD4CTg2ejr2"
+    credentials_dict["type"] = "authorized_user"
 
-    # Use google.auth to load the refresh token
     from google.oauth2.credentials import Credentials
     credentials = Credentials.from_authorized_user_info(credentials_dict)
 
