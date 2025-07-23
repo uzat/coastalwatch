@@ -32,3 +32,10 @@ jobs:
           python dea_to_dashboard_export.py
         env:
           EARTHENGINE_TOKEN: ${{ secrets.EARTHENGINE_TOKEN }}
+
+      - name: Upload NDVI charts
+        uses: actions/upload-artifact@v3
+        with:
+          name: ndvi-charts
+          path: output/
+
