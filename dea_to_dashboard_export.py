@@ -3,6 +3,8 @@ import json
 import base64
 import ee
 import pandas as pd
+import matplotlib.pyplot as plt
+
 
 def initialize_earth_engine():
     b64 = os.environ.get("EARTHENGINE_SERVICE_ACCOUNT_JSON")
