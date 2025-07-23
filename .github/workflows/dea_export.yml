@@ -28,3 +28,5 @@ jobs:
       - name: Run export script
         run: |
           python dea_to_dashboard_export.py
+        env:
+          EARTHENGINE_TOKEN: ${{ secrets.EARTHENGINE_TOKEN }}
