@@ -20,10 +20,12 @@ jobs:
         run: |
           pip install earthengine-api pandas matplotlib
 
-      - name: Setup Earth Engine credentials
+      - name: Decode Earth Engine service account
         run: |
-          echo "${{ secrets.EARTHENGINE_SERVICE_ACCOUNT_JSON }}" | base64 --decode > service_account.json
-          echo "SERVICE_ACCOUNT_PATH=service_account.json" >> $GITHUB_ENV
+          mkdir -p ~/.config/earthengine
+          echo "${{ secrets.EARTHENGINE_SERVICE_ACCOUNT_JSON }}" | base64 --decode > ~/.config/earthengine/private-key.json
+        shell: bash
+
 
       - name: Run export script
         run: |
