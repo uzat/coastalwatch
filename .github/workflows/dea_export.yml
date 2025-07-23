@@ -23,11 +23,11 @@ jobs:
         run: |
           pip install earthengine-api pandas matplotlib geopandas
 
-      - name: 🔐 Decode Earth Engine credentials and save to file
+      - name: 🔐 Decode EE credentials and save to CLI path
         run: |
           mkdir -p ~/.config/earthengine
           echo "${{ secrets.EARTHENGINE_SERVICE_ACCOUNT_JSON }}" | base64 --decode > ~/.config/earthengine/credentials
-          echo "✅ Earth Engine credentials written"
+          echo "✅ Earth Engine credentials file written"
 
       - name: ✅ Confirm credentials file exists
         run: |
@@ -35,14 +35,16 @@ jobs:
             echo "❌ Earth Engine credentials missing or empty"
             exit 1
           else
-            echo "✅ Earth Engine credentials are present"
+            echo "✅ Earth Engine credentials file confirmed"
           fi
 
       - name: 🚀 Run NDVI export script
+        env:
+          EARTHENGINE_SERVICE_ACCOUNT_JSON: ${{ secrets.EARTHENGINE_SERVICE_ACCOUNT_JSON }}
         run: |
           echo "Starting export..."
           python dea_to_dashboard_export.py || { echo "❌ Export script failed"; exit 1; }
-          echo "Export script finished."
+          echo "✅ Export script finished."
 
       - name: 🧹 Show what changed
         run: |
@@ -58,7 +60,7 @@ jobs:
           git config --global user.name "github-actions"
           git config --global user.email "actions@github.com"
           git pull --rebase
-          git add -f data/** frontend_config.json dashboard_data.json || true
+          git add -f data/** output/** frontend_config.json dashboard_data.json || true
           git status
           git commit -m "🔄 Update exported NDVI data and charts" || echo "ℹ️ No changes to commit"
           git push || echo "⚠️ Push failed (possibly permissions or no changes)"
