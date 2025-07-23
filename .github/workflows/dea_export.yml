@@ -34,7 +34,7 @@ jobs:
           EARTHENGINE_TOKEN: ${{ secrets.EARTHENGINE_TOKEN }}
 
       - name: Upload NDVI charts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: ndvi-charts
           path: output/
