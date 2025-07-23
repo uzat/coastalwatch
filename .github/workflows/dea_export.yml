@@ -21,16 +21,30 @@ jobs:
           pip install --upgrade pip
           pip install earthengine-api pandas matplotlib geopandas
 
-      - name: 🔐 Setup Earth Engine credentials
+      - name: Setup Earth Engine credentials
         run: |
           mkdir -p ~/.config/earthengine
           echo "${{ secrets.EARTHENGINE_SERVICE_ACCOUNT_JSON }}" | base64 --decode > ~/.config/earthengine/credentials
+          echo "✅ Earth Engine credentials written"
 
+      - name: Confirm credentials file exists
+        run: |
+          if [ ! -s ~/.config/earthengine/credentials ]; then
+            echo "❌ Earth Engine credentials missing or empty"
+            exit 1
+          fi
+          
       - name: 🛰️ Run export script
         run: |
           echo "Starting export..."
           python dea_to_dashboard_export.py
           echo "Export script finished."
+
+      - name: Debug ENV and credential file
+        run: |
+          echo "Credential file content (first 3 lines):"
+          head -n 3 ~/.config/earthengine/credentials || echo "⚠️ File not found"
+
 
       - name: Commit and push results
         run: |
