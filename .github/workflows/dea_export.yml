@@ -32,13 +32,15 @@ jobs:
           python dea_to_dashboard_export.py
           echo "Export script finished."
 
-      - name: 📤 Commit and push results
+      - name: Commit and push results
         run: |
           git config --global user.name "github-actions"
           git config --global user.email "actions@github.com"
           git pull --rebase
-          git add -A
-          git commit -m "Update exported data and frontend config from Earth Engine" || echo "No changes to commit."
+          git add data/
+          if [ -f frontend_config.json ]; then git add frontend_config.json; fi
+          git commit -m "Update exported data and frontend config from Earth Engine" || echo "Nothing to commit"
           git push
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
