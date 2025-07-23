@@ -3,6 +3,7 @@ import json
 import ee
 import pandas as pd
 import matplotlib.pyplot as plt
+from google.oauth2.credentials import Credentials
 
 def export_ndvi_chart(csv_path: str, output_path: str):
     try:
@@ -29,27 +30,20 @@ def process_location(location_name):
     export_ndvi_chart(ndvi_csv, chart_path)
 
 def initialize_earth_engine():
+    ee_token = os.environ.get("EARTHENGINE_TOKEN")
+    if not ee_token:
+        raise Exception("EARTHENGINE_TOKEN environment variable not found")
+
+    # Parse the token into a dict
+    credentials_dict = json.loads(ee_token)
+
+    # Use google.auth to load the refresh token
+    from google.oauth2.credentials import Credentials
+    credentials = Credentials.from_authorized_user_info(credentials_dict)
+
     try:
-        # Get the token from the GitHub secret
-        ee_token = os.environ.get("EARTHENGINE_TOKEN")
-        if not ee_token:
-            raise Exception("EARTHENGINE_TOKEN environment variable not found")
-
-        # Parse the token into a dictionary
-        credentials_dict = json.loads(ee_token)
-
-        # Manually refresh using ee.OAuth2Credentials
-        credentials = ee.OAuth2Credentials(
-            refresh_token=credentials_dict['refresh_token'],
-            client_id='32555940559.apps.googleusercontent.com',
-            client_secret='ZmssLNjJy2998hD4CTg2ejr2',
-            token_uri='https://oauth2.googleapis.com/token',
-            scopes=credentials_dict['scopes'],
-            redirect_uri=credentials_dict['redirect_uri']
-        )
-
         ee.Initialize(credentials)
-        print("✅ Earth Engine initialized with manual credentials.")
+        print("✅ Earth Engine initialized successfully.")
     except Exception as e:
         print(f"❌ Failed to initialize Earth Engine: {e}")
         raise
