@@ -8,45 +8,54 @@ jobs:
     runs-on: ubuntu-22.04
 
     steps:
-      - name: Checkout repository
+      - name: 📥 Checkout repository
         uses: actions/checkout@v3
 
-      - name: Set up Python 3.10
+      - name: 🐍 Set up Python
         uses: actions/setup-python@v4
         with:
           python-version: '3.10'
 
-      - name: Install dependencies
+      - name: 📦 Install Python dependencies
         run: |
           pip install earthengine-api pandas matplotlib geopandas
 
-      - name: Decode EE credentials and write file
+      - name: 🔐 Decode Earth Engine credentials
         run: |
           mkdir -p ~/.config/earthengine
           echo "${{ secrets.EARTHENGINE_SERVICE_ACCOUNT_JSON }}" | base64 --decode > ~/.config/earthengine/credentials
-      - name: Confirm credentials exist
+          echo "✅ Credentials decoded to ~/.config/earthengine/credentials"
+
+      - name: ⚠️ Abort if credentials file missing or empty
         run: |
           if [ ! -s ~/.config/earthengine/credentials ]; then
-            echo "❌ Earth Engine credentials missing!"
+            echo "❌ Earth Engine credentials missing or empty"
             exit 1
+          else
+            echo "✅ Earth Engine credentials confirmed"
           fi
 
-      - name: Run NDVI export script
-        env:
-          EARTHENGINE_SERVICE_ACCOUNT_JSON: ${{ secrets.EARTHENGINE_SERVICE_ACCOUNT_JSON }}
+      - name: 🛰 Run NDVI export script
         run: |
           echo "Starting export..."
-          python dea_to_dashboard_export.py || { echo "❌ Script failed"; exit 1; }
-          echo "✅ Script finished"
+          python dea_to_dashboard_export.py
+        continue-on-error: false
 
-      - name: Commit and push results
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: 🗂 Show updated files
+        run: |
+          echo "📂 Current data files:"
+          find data/ -type f || echo "⚠️ No data files found"
+          echo "🖼 PNG output files:"
+          find output/ -type f || echo "⚠️ No chart images found"
+
+      - name: ✅ Commit and push results
         run: |
           git config --global user.name "github-actions"
           git config --global user.email "actions@github.com"
           git pull --rebase
-          git add -f data/**  || true
+          git add -f data/** output/** frontend_config.json dashboard_data.json || echo "⚠️ Nothing to stage"
           git status
-          git commit -m "Update NDVI exports" || echo "No changes"
-          git push || echo "Push failed"
+          git commit -m "Update exported NDVI data and config" || echo "⚠️ Nothing to commit"
+          git push
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
