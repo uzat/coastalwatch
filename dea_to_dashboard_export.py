@@ -1,18 +1,20 @@
-import os
+import base64
 import json
+import os
 import ee
-from google.oauth2.service_account import Credentials
+from google.oauth2 import service_account
 
 def initialize_earth_engine():
-    json_path = os.environ.get("SERVICE_ACCOUNT_PATH", "service_account.json")
-    if not os.path.exists(json_path):
-        raise Exception(f"Service account file not found: {json_path}")
+    b64_json = os.getenv("EARTHENGINE_SERVICE_ACCOUNT_JSON")
+    if not b64_json:
+        raise Exception("EARTHENGINE_SERVICE_ACCOUNT_JSON not found in environment variables.")
+    
+    json_str = base64.b64decode(b64_json).decode("utf-8")
+    service_account_info = json.loads(json_str)
 
-    with open(json_path) as f:
-        credentials_info = json.load(f)
-
-    credentials = Credentials.from_service_account_info(credentials_info)
+    credentials = service_account.Credentials.from_service_account_info(service_account_info)
     ee.Initialize(credentials)
+
 
 
 
