@@ -1,116 +1,10 @@
 import ee
 import os
+import json
 import pandas as pd
-import datetime
-import json
-
-# Authenticate and initialize Earth Engine
-
-import ee
-import json
-import os
-
-token_str = os.environ.get("EARTHENGINE_TOKEN")
-if not token_str:
-    raise RuntimeError("EARTHENGINE_TOKEN environment variable is missing.")
-
-# Write credentials to disk (temp file)
-cred_path = "earthengine_temp_credentials.json"
-with open(cred_path, "w") as f:
-    f.write(token_str)
-
-# Authenticate and initialize from the JSON file
-ee.Initialize(ee.ServiceAccountCredentials('', cred_path))
-print("✅ Earth Engine initialized successfully.")
-
-
-# Define multiple locations and bounding boxes
-locations = {
-    "Rainbow_Beach": {
-        "lon_min": 153.05,
-        "lon_max": 153.12,
-        "lat_min": -25.93,
-        "lat_max": -25.88,
-    },
-    "Byron_Bay": {
-        "lon_min": 153.57,
-        "lon_max": 153.63,
-        "lat_min": -28.67,
-        "lat_max": -28.62,
-    }
-}
-
-def add_indices(image):
-    ndvi = image.normalizedDifference(['B8', 'B4']).rename('NDVI')
-    ndwi = image.normalizedDifference(['B3', 'B8']).rename('NDWI')
-    return image.addBands([ndvi, ndwi])
-
-# Date range
-start_date = '2024-01-01'
-end_date = '2024-12-31'
-
-for loc, bounds in locations.items():
-    print(f"Processing {loc}...")
-
-    geometry = ee.Geometry.Rectangle([
-        bounds["lon_min"], bounds["lat_min"],
-        bounds["lon_max"], bounds["lat_max"]
-    ])
-
-    collection = (
-        ee.ImageCollection("COPERNICUS/S2_SR_HARMONIZED")
-        .filterDate(start_date, end_date)
-        .filterBounds(geometry)
-        .filter(ee.Filter.lt("CLOUDY_PIXEL_PERCENTAGE", 20))
-        .map(add_indices)
-    )
-
-    median_image = collection.median().clip(geometry)
-    ndvi_image = median_image.select('NDVI')
-    ndwi_image = median_image.select('NDWI')
-
-    # Export NDVI timeseries
-    ndvi_value = ndvi_image.reduceRegion(
-        reducer=ee.Reducer.mean(),
-        geometry=geometry,
-        scale=10,
-        maxPixels=1e9
-    ).getInfo().get('NDVI', None)
-
-    ndvi_df = pd.DataFrame([{
-        "Date": datetime.date.today().isoformat(),
-        "NDVI": ndvi_value
-    }])
-
-    ndvi_folder = f"data/NDVI/{loc}"
-    os.makedirs(ndvi_folder, exist_ok=True)
-    ndvi_df.to_csv(f"{ndvi_folder}/NDVI_timeseries_{loc}.csv", index=False)
-
-    # Generate coastline (NDWI threshold)
-    coastline_mask = ndwi_image.gt(0.1).selfMask()
-    coastline_vector = coastline_mask.reduceToVectors(
-        geometry=geometry,
-        scale=10,
-        geometryType='line',
-        maxPixels=1e9
-    )
-
-    # Export GeoJSON
-    coastline_geojson = coastline_vector.getInfo()
-    coastline_folder = f"data/Coastlines/{loc}"
-    os.makedirs(coastline_folder, exist_ok=True)
-    with open(f"{coastline_folder}/coastlines_{loc}.geojson", "w") as f:
-        import json
-        json.dump(coastline_geojson, f)
-
-    print(f"Saved: NDVI and coastline data for {loc}")
-
-print("✅ Earth Engine multi-site NDVI + coastline export complete.")
-
 import matplotlib.pyplot as plt
 
 def export_ndvi_chart(csv_path: str, output_path: str):
-    import pandas as pd
     try:
         df = pd.read_csv(csv_path)
         df['Date'] = pd.to_datetime(df['Date'])
@@ -123,18 +17,45 @@ def export_ndvi_chart(csv_path: str, output_path: str):
         plt.ylabel('NDVI')
         plt.grid(True)
         plt.tight_layout()
-
         plt.savefig(output_path)
         plt.close()
         print(f"✅ Saved NDVI chart to {output_path}")
     except Exception as e:
         print(f"⚠️ Could not generate chart: {e}")
 
-# Example usage
-export_ndvi_chart(
-    csv_path='data/NDVI/Rainbow_Beach/NDVI_Rainbow_Beach.csv',
-    output_path='data/NDVI/Rainbow_Beach/NDVI_Rainbow_Beach_chart.png'
-)
+def process_location(location_name):
+    # NDVI CSV path
+    ndvi_csv = f'data/NDVI/{location_name}/NDVI_{location_name}.csv'
+    chart_path = f'data/NDVI/{location_name}/NDVI_{location_name}_chart.png'
 
-import os
-os.remove(cred_path)
+    # Export chart
+    export_ndvi_chart(ndvi_csv, chart_path)
+
+def initialize_earth_engine():
+    token_str = os.environ.get("EARTHENGINE_TOKEN")
+    if not token_str:
+        raise RuntimeError("EARTHENGINE_TOKEN environment variable is missing.")
+
+    cred_path = "earthengine_temp_credentials.json"
+    with open(cred_path, "w") as f:
+        f.write(token_str)
+
+    # Initialize with service account stub (using refresh token behind the scenes)
+    ee.Initialize(ee.ServiceAccountCredentials('', cred_path))
+    print("✅ Earth Engine initialized successfully.")
+
+    return cred_path
+
+def main():
+    locations = ["Rainbow_Beach", "Byron_Bay"]
+    cred_path = initialize_earth_engine()
+
+    for loc in locations:
+        print(f"📍 Processing location: {loc}")
+        process_location(loc)
+
+    # Clean up
+    os.remove(cred_path)
+
+if __name__ == "__main__":
+    main()
