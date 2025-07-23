@@ -1,18 +1,24 @@
-import ee
 import os
 import json
-import pandas as pd
-import matplotlib.pyplot as plt
-from datetime import datetime
+import base64
+import ee
 
 def initialize_earth_engine():
-    service_account_json = os.getenv('EARTHENGINE_SERVICE_ACCOUNT_JSON')
-    if not service_account_json:
+    b64 = os.environ.get("EARTHENGINE_SERVICE_ACCOUNT_JSON")
+    if not b64:
         raise Exception("EARTHENGINE_SERVICE_ACCOUNT_JSON not found in environment variables.")
+    try:
+        decoded = base64.b64decode(b64).decode("utf-8")
+        credentials_json = json.loads(decoded)
+        credentials = ee.ServiceAccountCredentials(
+            email=credentials_json["client_email"],
+            key_data=json.dumps(credentials_json)
+        )
+        ee.Initialize(credentials)
+        print("✅ Earth Engine initialized successfully.")
+    except Exception as e:
+        raise Exception(f"Failed to initialize Earth Engine: {str(e)}")
 
-    credentials_dict = json.loads(service_account_json)
-    credentials = ee.ServiceAccountCredentials(credentials_dict['client_email'], key_data=credentials_dict)
-    ee.Initialize(credentials)
 
 def export_ndvi_chart(location_name, ndvi_data):
     os.makedirs("output", exist_ok=True)
