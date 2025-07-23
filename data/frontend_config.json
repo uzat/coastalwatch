@@ -1,0 +1,22 @@
+{
+  "locations": [
+    {
+      "name": "Rainbow_Beach",
+      "data_layers": [
+        {
+          "type": "NDVI",
+          "summary_csv": "data/NDVI/Rainbow_Beach/ndvi_summary_Rainbow_Beach.csv",
+          "raster_files": [
+            "data/NDVI/Rainbow_Beach/ndvi_Rainbow_Beach_2025-07-01.tif",
+            "data/NDVI/Rainbow_Beach/ndvi_Rainbow_Beach_2025-07-15.tif"
+          ]
+        },
+        {
+          "type": "Coastline",
+          "vector_file": "data/Coastlines/Rainbow_Beach/coastlines_Rainbow_Beach.geojson",
+          "summary_csv": null
+        }
+      ]
+    }
+  ]
+}
