@@ -29,8 +29,26 @@ def process_location(location_name):
 
 def initialize_earth_engine():
     try:
-        ee.Initialize()
-        print("✅ Earth Engine initialized successfully.")
+        # Get the token from the GitHub secret
+        ee_token = os.environ.get("EARTHENGINE_TOKEN")
+        if not ee_token:
+            raise Exception("EARTHENGINE_TOKEN environment variable not found")
+
+        # Parse the token into a dictionary
+        credentials_dict = json.loads(ee_token)
+
+        # Manually refresh using ee.OAuth2Credentials
+        credentials = ee.OAuth2Credentials(
+            refresh_token=credentials_dict['refresh_token'],
+            client_id='32555940559.apps.googleusercontent.com',
+            client_secret='ZmssLNjJy2998hD4CTg2ejr2',
+            token_uri='https://oauth2.googleapis.com/token',
+            scopes=credentials_dict['scopes'],
+            redirect_uri=credentials_dict['redirect_uri']
+        )
+
+        ee.Initialize(credentials)
+        print("✅ Earth Engine initialized with manual credentials.")
     except Exception as e:
         print(f"❌ Failed to initialize Earth Engine: {e}")
         raise
