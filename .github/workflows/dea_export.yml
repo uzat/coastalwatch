@@ -25,13 +25,6 @@ jobs:
         run: echo "Set secret"
         env:
           EARTHENGINE_SERVICE_ACCOUNT_JSON: ${{ secrets.EARTHENGINE_SERVICE_ACCOUNT_JSON }}
-
-      - name: Confirm credentials file exists
-        run: |
-          if [ ! -s ~/.config/earthengine/credentials ]; then
-            echo "❌ Earth Engine credentials missing or empty"
-            exit 1
-          fi
           
       - name: Run export script
         run: |
@@ -39,12 +32,6 @@ jobs:
           python dea_to_dashboard_export.py
         env:
           EARTHENGINE_SERVICE_ACCOUNT_JSON: ${{ secrets.EARTHENGINE_SERVICE_ACCOUNT_JSON }}
-
-      - name: Debug ENV and credential file
-        run: |
-          echo "Credential file content (first 3 lines):"
-          head -n 3 ~/.config/earthengine/credentials || echo "⚠️ File not found"
-
 
       - name: Commit and push results
         run: |
