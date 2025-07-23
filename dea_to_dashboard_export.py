@@ -2,10 +2,22 @@ import ee
 import os
 import pandas as pd
 import datetime
+import json
 
 # Authenticate and initialize Earth Engine
-ee.Authenticate()
-ee.Initialize()
+
+token_str = os.environ.get("EARTHENGINE_TOKEN")
+if not token_str:
+    raise RuntimeError("EARTHENGINE_TOKEN environment variable is missing.")
+
+token_dict = json.loads(token_str)
+credentials = ee.OAuth2Credentials(
+    token_dict["refresh_token"],
+    "earthengine-api",
+    token_dict["scopes"],
+    token_dict["redirect_uri"]
+)
+ee.Initialize(credentials)
 
 # Define multiple locations and bounding boxes
 locations = {
