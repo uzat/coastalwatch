@@ -2,95 +2,130 @@ import os
 import json
 import base64
 import ee
-import sys
 import pandas as pd
 import matplotlib.pyplot as plt
 from datetime import datetime
+
+
+# === Config ===
+USE_SCL_MASKING = True  # Set False to use probability-based cloud masking
+NDVI_DAYS_INTERVAL = 14
+
 
 def initialize_earth_engine():
     b64 = os.environ.get("EARTHENGINE_SERVICE_ACCOUNT_JSON")
     if not b64:
         raise Exception("EARTHENGINE_SERVICE_ACCOUNT_JSON not found in environment variables.")
-    try:
-        decoded = base64.b64decode(b64).decode("utf-8")
-        credentials_json = json.loads(decoded)
-        credentials = ee.ServiceAccountCredentials(
-            email=credentials_json["client_email"],
-            key_data=json.dumps(credentials_json)
-        )
-        ee.Initialize(credentials)
-        print("✅ Earth Engine initialized successfully.")
-    except Exception as e:
-        print(f"❌ Failed to initialize Earth Engine: {e}")
-        sys.exit(1)
+    decoded = base64.b64decode(b64).decode("utf-8")
+    credentials_json = json.loads(decoded)
+    credentials = ee.ServiceAccountCredentials(
+        email=credentials_json["client_email"],
+        key_data=json.dumps(credentials_json)
+    )
+    ee.Initialize(credentials)
+    print("✅ Earth Engine initialized successfully.")
 
-def mask_s2_sr(image):
-    qa = image.select('QA60')
-    cloudBitMask = 1 << 10
-    cirrusBitMask = 1 << 11
-    mask = qa.bitwiseAnd(cloudBitMask).eq(0).And(qa.bitwiseAnd(cirrusBitMask).eq(0))
+
+def mask_clouds_scl(image):
+    scl = image.select("SCL")
+    mask = scl.neq(3).And(scl.neq(8)).And(scl.neq(9)).And(scl.neq(10))
     return image.updateMask(mask)
 
-def compute_ndvi_timeseries(location_name, region):
-    start_date = "2024-01-01"
-    end_date = datetime.today().strftime('%Y-%m-%d')
-    s2 = ee.ImageCollection("COPERNICUS/S2_SR") \
-        .filterDate(start_date, end_date) \
-        .filterBounds(region) \
-        .map(mask_s2_sr) \
-        .map(lambda img: img.addBands(img.normalizedDifference(['B8', 'B4']).rename('NDVI')))
-    size = s2.size().getInfo()
-    print(f"📸 Found {size} Sentinel-2 images for {location_name}")
-    if size == 0:
-        return []
-    def extract_ndvi(image):
-        date = image.date().format('YYYY-MM-dd')
-        mean = image.select('NDVI').reduceRegion(
-            reducer=ee.Reducer.mean(), geometry=region, scale=10, maxPixels=1e9
-        ).get('NDVI')
-        return ee.Feature(None, {'date': date, 'ndvi': mean})
-    features = ee.FeatureCollection(s2.map(extract_ndvi)).getInfo()["features"]
-    return [f["properties"] for f in features if f["properties"].get("ndvi") is not None]
 
-def export_ndvi_results(location_name, ndvi_data):
-    folder = f"data/NDVI/{location_name}"
-    os.makedirs(folder, exist_ok=True)
-    if not ndvi_data:
-        print(f"⚠️ No NDVI data for {location_name}, skipping export.")
-        return
-    df = pd.DataFrame(ndvi_data)
-    df['date'] = pd.to_datetime(df['date'], errors='coerce')
-    df = df.dropna(subset=['date'])
-    df = df.sort_values("date")
-    csv_path = f"{folder}/ndvi_summary_{location_name}.csv"
-    df.to_csv(csv_path, index=False)
-    plt.figure(figsize=(10, 5))
-    plt.plot(df['date'], df['ndvi'], marker='o')
-    plt.title(f"NDVI Time Series – {location_name.replace('_', ' ')}")
-    plt.xlabel("Date")
-    plt.ylabel("NDVI")
-    plt.grid(True)
-    plt.tight_layout()
-    chart_path = f"{folder}/ndvi_chart_{location_name}.png"
-    plt.savefig(chart_path)
-    plt.close()
-    print(f"✅ Exported CSV & chart for {location_name}")
+def mask_clouds_probability(image):
+    cloud_prob = image.select("MSK_CLDPRB")
+    return image.updateMask(cloud_prob.lt(30))
+
+
+def calculate_ndvi(image):
+    ndvi = image.normalizedDifference(["B8", "B4"]).rename("NDVI")
+    return image.addBands(ndvi)
+
+
+def get_ndvi_time_series(aoi, start_date, end_date):
+    collection = ee.ImageCollection("COPERNICUS/S2_SR") \
+        .filterBounds(aoi) \
+        .filterDate(start_date, end_date) \
+        .filter(ee.Filter.lt("CLOUDY_PIXEL_PERCENTAGE", 50)) \
+        .map(mask_clouds_scl if USE_SCL_MASKING else mask_clouds_probability) \
+        .map(calculate_ndvi)
+
+    def reduce_image(image):
+        date = ee.Date(image.get("system:time_start")).format("YYYY-MM-dd")
+        mean = image.select("NDVI").reduceRegion(
+            reducer=ee.Reducer.mean(),
+            geometry=aoi,
+            scale=10
+        ).get("NDVI")
+        return ee.Feature(None, {"date": date, "ndvi": mean})
+
+    features = collection.map(reduce_image).filter(
+        ee.Filter.notNull(["ndvi"])
+    ).aggregate_array("properties")
+
+    results = features.getInfo()
+    if not results:
+        return []
+
+    return [{"date": f["date"], "ndvi": f["ndvi"]} for f in results]
+
+
+def export_ndvi_chart(location_name, ndvi_data):
+    os.makedirs("output", exist_ok=True)
+    try:
+        df = pd.DataFrame(ndvi_data)
+        df["date"] = pd.to_datetime(df["date"])
+        df = df.sort_values("date")
+        plt.figure(figsize=(10, 5))
+        plt.plot(df["date"], df["ndvi"], marker="o")
+        plt.title(f"NDVI Time Series – {location_name.replace("_", " ")}")
+        plt.xlabel("Date")
+        plt.ylabel("NDVI")
+        plt.grid(True)
+        plt.tight_layout()
+        path = f"output/{location_name}_ndvi_chart.png"
+        plt.savefig(path)
+        plt.close()
+        print(f"📈 Saved chart: {path}")
+    except Exception as e:
+        print(f"⚠️ Failed to create chart for {location_name}: {e}")
+
+
+def export_summary_csv(location_name, ndvi_data):
+    try:
+        folder = f"data/NDVI/{location_name}"
+        os.makedirs(folder, exist_ok=True)
+        df = pd.DataFrame(ndvi_data)
+        path = f"{folder}/ndvi_summary_{location_name}.csv"
+        df.to_csv(path, index=False)
+        print(f"📄 Saved NDVI summary: {path}")
+    except Exception as e:
+        print(f"⚠️ Failed to save summary for {location_name}: {e}")
+
 
 def main():
     initialize_earth_engine()
+
     locations = {
-        "Rainbow_Beach": ee.Geometry.Polygon([
-            [[153.093, -25.902], [153.093, -25.812], [153.203, -25.812], [153.203, -25.902]]
-        ]),
-        "Byron_Bay": ee.Geometry.Polygon([
-            [[153.580, -28.680], [153.580, -28.610], [153.640, -28.610], [153.640, -28.680]]
-        ])
+        "Rainbow_Beach": ee.Geometry.Point([153.138, -25.904]),
+        "Byron_Bay": ee.Geometry.Point([153.61, -28.647]),
     }
-    for name, geom in locations.items():
-        print(f"📍 Processing location: {name}")
-        data = compute_ndvi_timeseries(name, geom)
-        export_ndvi_results(name, data)
-    print("✅ Export script finished.")
+
+    start_date = "2024-01-01"
+    end_date = datetime.now().strftime("%Y-%m-%d")
+
+    for loc_name, geom in locations.items():
+        print(f"📍 Processing location: {loc_name}")
+        try:
+            ndvi_data = get_ndvi_time_series(geom, start_date, end_date)
+            if not ndvi_data:
+                print(f"⚠️ No NDVI summary returned for {loc_name}")
+                continue
+            export_summary_csv(loc_name, ndvi_data)
+            export_ndvi_chart(loc_name, ndvi_data)
+        except Exception as e:
+            print(f"❌ Failed to process {loc_name}: {e}")
+
 
 if __name__ == "__main__":
     main()
