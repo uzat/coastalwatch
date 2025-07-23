@@ -6,6 +6,7 @@ on:
 jobs:
   export:
     runs-on: ubuntu-22.04
+
     env:
       EARTHENGINE_SERVICE_ACCOUNT_JSON: ${{ secrets.EARTHENGINE_SERVICE_ACCOUNT_JSON }}
 
@@ -22,11 +23,6 @@ jobs:
         run: |
           pip install earthengine-api pandas matplotlib geopandas
 
-      - name: Setup Earth Engine credentials
-        run: |
-          mkdir -p ~/.config/earthengine
-          echo "${{ secrets.EARTHENGINE_SERVICE_ACCOUNT_JSON }}" | base64 --decode > ~/.config/earthengine/credentials
-
       - name: Run export script
         run: |
           python dea_to_dashboard_export.py
@@ -36,10 +32,7 @@ jobs:
           git config --global user.name "github-actions"
           git config --global user.email "actions@github.com"
           git pull --rebase
-          git add data/
-          if [ -f frontend_config.json ]; then
-            git add frontend_config.json
-          fi
+          git add data/ frontend_config.json
           git commit -m "Update exported data and frontend config from Earth Engine"
           git push
         env:
