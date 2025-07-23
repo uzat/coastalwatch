@@ -6,18 +6,23 @@ import json
 
 # Authenticate and initialize Earth Engine
 
+import ee
+import json
+import os
+
 token_str = os.environ.get("EARTHENGINE_TOKEN")
 if not token_str:
     raise RuntimeError("EARTHENGINE_TOKEN environment variable is missing.")
 
-token_dict = json.loads(token_str)
-credentials = ee.OAuth2Credentials(
-    token_dict["refresh_token"],
-    "earthengine-api",
-    token_dict["scopes"],
-    token_dict["redirect_uri"]
-)
-ee.Initialize(credentials)
+# Write credentials to disk (temp file)
+cred_path = "earthengine_temp_credentials.json"
+with open(cred_path, "w") as f:
+    f.write(token_str)
+
+# Authenticate and initialize from the JSON file
+ee.Initialize(ee.ServiceAccountCredentials('', cred_path))
+print("✅ Earth Engine initialized successfully.")
+
 
 # Define multiple locations and bounding boxes
 locations = {
@@ -130,3 +135,6 @@ export_ndvi_chart(
     csv_path='data/NDVI/Rainbow_Beach/NDVI_Rainbow_Beach.csv',
     output_path='data/NDVI/Rainbow_Beach/NDVI_Rainbow_Beach_chart.png'
 )
+
+import os
+os.remove(cred_path)
