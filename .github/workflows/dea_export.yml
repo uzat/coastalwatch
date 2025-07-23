@@ -21,7 +21,7 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install earthengine-api pandas geopandas
+          pip install earthengine-api pandas geopandas matplotlib
 
       - name: Run NDVI + Coastline export
         env:
