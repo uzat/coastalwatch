@@ -101,3 +101,32 @@ for loc, bounds in locations.items():
     print(f"Saved: NDVI and coastline data for {loc}")
 
 print("✅ Earth Engine multi-site NDVI + coastline export complete.")
+
+import matplotlib.pyplot as plt
+
+def export_ndvi_chart(csv_path: str, output_path: str):
+    import pandas as pd
+    try:
+        df = pd.read_csv(csv_path)
+        df['Date'] = pd.to_datetime(df['Date'])
+        df = df.sort_values('Date')
+
+        plt.figure(figsize=(10, 5))
+        plt.plot(df['Date'], df['NDVI'], marker='o', linestyle='-', color='green')
+        plt.title('NDVI over Time')
+        plt.xlabel('Date')
+        plt.ylabel('NDVI')
+        plt.grid(True)
+        plt.tight_layout()
+
+        plt.savefig(output_path)
+        plt.close()
+        print(f"✅ Saved NDVI chart to {output_path}")
+    except Exception as e:
+        print(f"⚠️ Could not generate chart: {e}")
+
+# Example usage
+export_ndvi_chart(
+    csv_path='data/NDVI/Rainbow_Beach/NDVI_Rainbow_Beach.csv',
+    output_path='data/NDVI/Rainbow_Beach/NDVI_Rainbow_Beach_chart.png'
+)
