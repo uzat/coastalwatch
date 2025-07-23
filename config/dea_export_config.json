@@ -1,0 +1,18 @@
+{
+  "locations": [
+    {
+      "name": "Rainbow_Beach",
+      "lat": -25.9,
+      "lon": 153.1,
+      "radius_km": 5,
+      "exports": ["NDVI", "WaterExtent", "LandCover", "DuneErosion"]
+    },
+    {
+      "name": "Byron_Bay",
+      "lat": -28.64,
+      "lon": 153.61,
+      "radius_km": 5,
+      "exports": ["NDVI", "WaterExtent", "LandCover", "DuneErosion"]
+    }
+  ]
+}
