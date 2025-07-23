@@ -20,7 +20,8 @@ def initialize_earth_engine():
         ee.Initialize(credentials)
         print("✅ Earth Engine initialized successfully.")
     except Exception as e:
-        raise Exception(f"Failed to initialize Earth Engine: {str(e)}")
+        print(f"❌ Failed to initialize Earth Engine: {e}")
+        sys.exit(1)
 
 
 def export_ndvi_chart(location_name, ndvi_data):
